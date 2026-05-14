@@ -1,19 +1,29 @@
 import { Bar } from './types';
 
+// Datos reales de OpenStreetMap (Overpass API) — bares de Alcorcón
 const _bares: Bar[] = [
-  { id: '1', nombre: 'Bar Manolo', direccion: 'C/ Mayor 23', ciudad: 'Alcorcón', barrio: 'Centro', lat: 40.3457, lng: -3.8285, verificado: true, tieneTapa: true },
-  { id: '2', nombre: 'La Estación', direccion: 'Av. de Lisboa 5', ciudad: 'Alcorcón', barrio: 'Las Retamas', lat: 40.3520, lng: -3.8350, verificado: true, tieneTapa: true },
-  { id: '3', nombre: 'Bar Plaza', direccion: 'Plaza de los Príncipes 1', ciudad: 'Alcorcón', barrio: 'Centro', lat: 40.3475, lng: -3.8270, verificado: false, tieneTapa: false },
-  { id: '4', nombre: 'La Terraza', direccion: 'C/ Polvoranca 12', ciudad: 'Alcorcón', barrio: 'San José de Valderas', lat: 40.3380, lng: -3.8400, verificado: false, tieneTapa: false },
-  { id: '5', nombre: 'El Rincón', direccion: 'C/ Cáceres 8', ciudad: 'Alcorcón', barrio: 'Parque Lisboa', lat: 40.3550, lng: -3.8290, verificado: false, tieneTapa: true },
-  { id: '6', nombre: 'Casa Pepe', direccion: 'C/ Iglesia 15', ciudad: 'Alcorcón', barrio: 'Centro', lat: 40.3460, lng: -3.8295, verificado: false, tieneTapa: true },
-  { id: '7', nombre: 'Bar Centro', direccion: 'C/ Fuenlabrada 22', ciudad: 'Alcorcón', barrio: 'Centro', lat: 40.3470, lng: -3.8310, verificado: false, tieneTapa: false },
-  { id: '8', nombre: 'El Soportal', direccion: 'C/ Mayor 45', ciudad: 'Alcorcón', barrio: 'Centro', lat: 40.3450, lng: -3.8275, verificado: true, tieneTapa: true },
-  { id: '9', nombre: 'La Esquina', direccion: 'C/ Pinto 3', ciudad: 'Alcorcón', barrio: 'Parque Ondarreta', lat: 40.3490, lng: -3.8380, verificado: false, tieneTapa: false },
-  { id: '10', nombre: 'Bar Antiguo', direccion: 'C/ Cantos 18', ciudad: 'Alcorcón', barrio: 'Centro', lat: 40.3465, lng: -3.8260, verificado: false, tieneTapa: true },
-  { id: '11', nombre: 'La Bodeguita', direccion: 'C/ Pradillo 7', ciudad: 'Alcorcón', barrio: 'Parque Lisboa', lat: 40.3535, lng: -3.8320, verificado: true, tieneTapa: true },
-  { id: '12', nombre: 'Taberna del Sur', direccion: 'C/ Dos de Mayo 33', ciudad: 'Alcorcón', barrio: 'Centro', lat: 40.3445, lng: -3.8300, verificado: false, tieneTapa: true },
-  { id: '13', nombre: 'Bar los Arcos', direccion: 'Av. de Móstoles 14', ciudad: 'Alcorcón', barrio: 'El Torreón', lat: 40.3410, lng: -3.8330, verificado: false, tieneTapa: false },
+  { id: '587346162',   nombre: 'La Contemporanea',        direccion: '',                       ciudad: 'Alcorcón', lat: 40.3373823, lng: -3.8557310, verificado: false, tieneTapa: false },
+  { id: '2463349971',  nombre: "L'Santina",                direccion: '',                       ciudad: 'Alcorcón', lat: 40.3333977, lng: -3.8310620, verificado: false, tieneTapa: false },
+  { id: '2973397943',  nombre: 'La posada de Eva',         direccion: '',                       ciudad: 'Alcorcón', lat: 40.3464135, lng: -3.8129904, verificado: false, tieneTapa: false },
+  { id: '4195880680',  nombre: 'Bar Restaurante Celedonio',direccion: 'Calle Munich 4',         ciudad: 'Alcorcón', lat: 40.3444783, lng: -3.8154321, verificado: false, tieneTapa: false },
+  { id: '4312956895',  nombre: 'Pickup',                   direccion: '',                       ciudad: 'Alcorcón', lat: 40.3381454, lng: -3.8278074, verificado: false, tieneTapa: false },
+  { id: '4457745911',  nombre: 'La Barrita',               direccion: '',                       ciudad: 'Alcorcón', lat: 40.3309669, lng: -3.8388144, verificado: false, tieneTapa: false },
+  { id: '4457745912',  nombre: 'El Bar de Luis',           direccion: '',                       ciudad: 'Alcorcón', lat: 40.3309278, lng: -3.8379593, verificado: false, tieneTapa: false },
+  { id: '4457745913',  nombre: 'Queen',                    direccion: 'Calle Pablo Picasso 3',  ciudad: 'Alcorcón', lat: 40.3305575, lng: -3.8389225, verificado: false, tieneTapa: false },
+  { id: '4910957315',  nombre: 'PiKARA',                   direccion: 'Calle Martin Luther King',ciudad: 'Alcorcón', lat: 40.3288530, lng: -3.8337969, verificado: false, tieneTapa: false },
+  { id: '4913021889',  nombre: 'Amphora Madrid',           direccion: '',                       ciudad: 'Alcorcón', lat: 40.3447441, lng: -3.8119649, verificado: false, tieneTapa: false },
+  { id: '4949014821',  nombre: 'La Traicionera',           direccion: '',                       ciudad: 'Alcorcón', lat: 40.3309686, lng: -3.8394541, verificado: false, tieneTapa: false },
+  { id: '6435780630',  nombre: 'Jamon y Pan',              direccion: '',                       ciudad: 'Alcorcón', lat: 40.3404104, lng: -3.8288310, verificado: false, tieneTapa: true  },
+  { id: '8398265600',  nombre: "Café-bar Vico's Sandra",   direccion: 'Calle Zamora 7',         ciudad: 'Alcorcón', lat: 40.3430883, lng: -3.8316389, verificado: false, tieneTapa: false },
+  { id: '9588578265',  nombre: 'Si, o que',                direccion: 'Calle Martin Luther King',ciudad: 'Alcorcón', lat: 40.3288517, lng: -3.8346106, verificado: false, tieneTapa: false },
+  { id: '10704532605', nombre: 'Bar Apolo',                direccion: '',                       ciudad: 'Alcorcón', lat: 40.3559347, lng: -3.8141871, verificado: false, tieneTapa: true  },
+  { id: '10913894577', nombre: 'Bacterio Brewing CO',      direccion: '',                       ciudad: 'Alcorcón', lat: 40.3391871, lng: -3.8365597, verificado: false, tieneTapa: false },
+  { id: '11248458723', nombre: 'Kiriki Bar',               direccion: '',                       ciudad: 'Alcorcón', lat: 40.3427514, lng: -3.8282381, verificado: false, tieneTapa: false },
+  { id: '11435570350', nombre: 'Dublin 98',                direccion: 'Calle Jabonería 59',     ciudad: 'Alcorcón', lat: 40.3494959, lng: -3.8236827, verificado: false, tieneTapa: false },
+  { id: '11435666913', nombre: 'Beerseker',                direccion: 'Calle de Polvoranca 66', ciudad: 'Alcorcón', lat: 40.3421531, lng: -3.8200398, verificado: false, tieneTapa: false },
+  { id: '11810077436', nombre: 'Calima',                   direccion: '',                       ciudad: 'Alcorcón', lat: 40.3445852, lng: -3.8120965, verificado: false, tieneTapa: false },
+  { id: '12121057101', nombre: 'La Tasca',                 direccion: 'Calle Timanfaya',        ciudad: 'Alcorcón', lat: 40.3491189, lng: -3.8096512, verificado: false, tieneTapa: true  },
+  { id: '13019334967', nombre: 'Felipe',                   direccion: '',                       ciudad: 'Alcorcón', lat: 40.3512722, lng: -3.8321975, verificado: false, tieneTapa: false },
 ];
 
 export function getBares(): Bar[] {
