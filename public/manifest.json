@@ -2,7 +2,7 @@
   "name": "CañaJusta",
   "short_name": "CañaJusta",
   "description": "El índice ciudadano del precio de la caña en España",
-  "start_url": "/mapa",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#1A1A1A",
   "theme_color": "#EF9F27",
