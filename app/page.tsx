@@ -125,11 +125,17 @@ export default function HomePage() {
         const promedio = getPrecioCanaPromedio(bar.id);
         const color = promedio ? getColorPorPrecioDirecto(promedio, 'caña') : 'ambar';
         const hex = color === 'verde' ? '#639922' : color === 'ambar' ? '#EF9F27' : '#C73E3A';
-        const label = promedio ? `${promedio.toFixed(2).replace('.', ',')}€` : '?';
+        const label = promedio ? `${promedio.toFixed(2).replace('.', ',')}€` : null;
+        const iconHtml = label
+          ? `<div style="position:relative;display:inline-block">
+              <div style="background:${hex};border:2px solid white;border-radius:8px;padding:4px 8px;font-size:13px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);line-height:1.2">${label}</div>
+              <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${hex};margin:0 auto"></div>
+            </div>`
+          : `<div style="width:12px;height:12px;border-radius:50%;background:#5F5E5A;border:2px solid #9a9890;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`;
         const icon = L.divIcon({
           className: '',
-          html: `<div style="background:${hex};border:2px solid white;border-radius:20px;padding:3px 8px;font-size:12px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5)">${label}</div>`,
-          iconAnchor: [24, 12],
+          html: iconHtml,
+          iconAnchor: label ? [28, 32] : [6, 6],
         });
         const marker = L.marker([bar.lat, bar.lng], { icon }).addTo(map);
         marker.on('click', () => router.push(`/bar/${bar.id}`));
