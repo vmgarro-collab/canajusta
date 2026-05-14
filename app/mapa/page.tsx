@@ -3,13 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import BottomNav from '@/components/BottomNav';
 import { getBares } from '@/data/bares';
-import { getPrecioCanaPromedio } from '@/data/precios';
+import { getPrecioCanaPromedio, getPrecios } from '@/data/precios';
 import { getColorPorPrecioDirecto, colorClasses } from '@/lib/colors';
 import { formatPrecio } from '@/lib/normalize';
-import { SlidersHorizontal, Navigation, X, MapPin, List, Map } from 'lucide-react';
-import { Bar } from '@/data/types';
+import { Search, MapPin, Plus, User, ChevronRight, BadgeCheck } from 'lucide-react';
 
 function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
@@ -19,249 +17,244 @@ function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const TODOS_LOS_BARES = getBares().map(b => ({
-  bar: b,
-  precio: getPrecioCanaPromedio(b.id),
-}));
+const BARES = getBares();
+const BARES_CON_PRECIO = BARES.map(b => ({ bar: b, precio: getPrecioCanaPromedio(b.id) })).filter(b => b.precio !== null) as { bar: typeof BARES[0]; precio: number }[];
+const PRECIOS_TOTAL = getPrecios().length;
+const PRECIO_MEDIO = BARES_CON_PRECIO.length ? BARES_CON_PRECIO.reduce((s, b) => s + b.precio, 0) / BARES_CON_PRECIO.length : null;
+const PRECIO_MIN = BARES_CON_PRECIO.length ? Math.min(...BARES_CON_PRECIO.map(b => b.precio)) : null;
+const PRECIO_MAX = BARES_CON_PRECIO.length ? Math.max(...BARES_CON_PRECIO.map(b => b.precio)) : null;
+const MAS_BARATOS = [...BARES_CON_PRECIO].sort((a, b) => a.precio - b.precio).slice(0, 5);
+const MAS_CAROS = [...BARES_CON_PRECIO].sort((a, b) => b.precio - a.precio).slice(0, 5);
 
-const TOTAL_BARES = getBares().length;
-const TOTAL_VERIFICADOS = getBares().filter(b => b.verificado).length;
-
-export default function MapaPage() {
+export default function HomePage() {
   const router = useRouter();
   const mapRef = useRef<HTMLDivElement>(null);
-  const [vista, setVista] = useState<'lista' | 'mapa'>('lista');
+  const [busqueda, setBusqueda] = useState('');
   const [distancias, setDistancias] = useState<Record<string, number>>({});
-  const [geoError, setGeoError] = useState('');
-  const [modal, setModal] = useState<{ bar: Bar; precio: number; distancia: number }[] | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
 
-  // Pedir ubicación al montar (silencioso, sin bloqueante)
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(pos => {
-      const { latitude, longitude } = pos.coords;
-      const d: Record<string, number> = {};
-      getBares().forEach(b => { d[b.id] = distanciaKm(latitude, longitude, b.lat, b.lng); });
-      setDistancias(d);
-    });
-  }, []);
-
-  // Init mapa solo cuando está visible
-  useEffect(() => {
-    if (vista !== 'mapa' || !mapRef.current) return;
+    if (!mapRef.current) return;
     let map: import('leaflet').Map | null = null;
-
     async function initMap() {
       const L = (await import('leaflet')).default;
       await import('leaflet/dist/leaflet.css');
       if (!mapRef.current || map) return;
-      map = L.map(mapRef.current, { center: [40.3457, -3.8285], zoom: 14, zoomControl: false });
+      map = L.map(mapRef.current, { center: [40.3457, -3.8285], zoom: 13, zoomControl: false, scrollWheelZoom: false });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
-      for (const bar of getBares()) {
+      for (const bar of BARES) {
         const promedio = getPrecioCanaPromedio(bar.id);
         const color = promedio ? getColorPorPrecioDirecto(promedio, 'caña') : 'ambar';
         const hex = color === 'verde' ? '#639922' : color === 'ambar' ? '#EF9F27' : '#C73E3A';
+        const label = promedio ? `${promedio.toFixed(2).replace('.', ',')}€` : '?';
         const icon = L.divIcon({
           className: '',
-          html: `<div style="width:32px;height:32px;border-radius:50%;background:${hex};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;"><span style="color:white;font-weight:bold;font-size:13px;">🍺</span></div>`,
-          iconSize: [32, 32], iconAnchor: [16, 16],
+          html: `<div style="background:${hex};border:2px solid white;border-radius:20px;padding:2px 7px;font-size:11px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.4)">${label}</div>`,
+          iconAnchor: [20, 10],
         });
         const marker = L.marker([bar.lat, bar.lng], { icon }).addTo(map);
-        const barId = bar.id;
-        marker.on('click', () => router.push(`/bar/${barId}`));
-        const precioStr = promedio ? `${promedio.toFixed(2).replace('.', ',')}€` : 'Sin datos';
-        marker.bindTooltip(`<strong>${bar.nombre}</strong><br>Caña: ${precioStr}`, { offset: [0, -8] });
+        marker.on('click', () => router.push(`/bar/${bar.id}`));
       }
     }
-
     initMap();
     return () => { map?.remove(); };
-  }, [vista, router]);
+  }, [router]);
 
-  function handleMasBaratos() {
-    if (!navigator.geolocation) { setGeoError('Tu navegador no soporta geolocalizacion'); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude, longitude } = pos.coords;
-        const cercanos = TODOS_LOS_BARES
-          .filter(b => b.precio !== null)
-          .map(b => ({ bar: b.bar, precio: b.precio!, distancia: distanciaKm(latitude, longitude, b.bar.lat, b.bar.lng) }))
-          .sort((a, b) => a.precio - b.precio)
-          .slice(0, 3);
-        setModal(cercanos);
-        setGeoError('');
-      },
-      () => setGeoError('No se pudo obtener tu ubicacion'),
-    );
+  function handleNearMe() {
+    if (!navigator.geolocation) return;
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      const d: Record<string, number> = {};
+      BARES.forEach(b => { d[b.id] = distanciaKm(latitude, longitude, b.lat, b.lng); });
+      setDistancias(d);
+      setGeoLoading(false);
+    }, () => setGeoLoading(false));
   }
 
-  // Lista ordenada: si hay distancias, ordena por precio; si no, por precio también
-  const baresOrdenados = [...TODOS_LOS_BARES]
-    .filter(b => b.precio !== null)
-    .sort((a, b) => a.precio! - b.precio!);
+  const baresFiltrados = busqueda
+    ? BARES.filter(b => b.nombre.toLowerCase().includes(busqueda.toLowerCase()) || b.direccion.toLowerCase().includes(busqueda.toLowerCase()))
+    : null;
 
-  const baresSinPrecio = TODOS_LOS_BARES.filter(b => b.precio === null);
+  const baresConPrecioFiltrados: { bar: typeof BARES[0]; precio: number }[] = baresFiltrados
+    ? baresFiltrados.map(b => ({ bar: b, precio: getPrecioCanaPromedio(b.id) ?? 0 })).filter(b => b.precio > 0)
+    : Object.keys(distancias).length > 0
+      ? [...BARES_CON_PRECIO].sort((a, b) => (distancias[a.bar.id] ?? 99) - (distancias[b.bar.id] ?? 99))
+      : [...BARES_CON_PRECIO].sort((a, b) => a.precio - b.precio);
+
+  const baresListados = baresConPrecioFiltrados;
 
   return (
-    <div className="flex flex-col bg-[#1A1A1A]" style={{ height: '100dvh' }}>
+    <div className="min-h-screen bg-[#1A1A1A] text-[#F5F0E8]">
 
-      {/* Header */}
-      <header className="flex-none flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-[#D3D1C7]/20">
-        <div>
-          <h1 className="text-[#F5F0E8] font-bold text-lg leading-none">Alcorcón</h1>
-          <p className="text-[#5F5E5A] text-xs mt-0.5">
-            <span className="text-[#EF9F27]">{TOTAL_BARES}</span> locales ·{' '}
-            <span className="text-[#EF9F27]">{TOTAL_VERIFICADOS}</span> verificados
-          </p>
+      {/* ── HEADER ── */}
+      <header className="sticky top-0 z-50 bg-[#1A1A1A]/95 backdrop-blur border-b border-[#D3D1C7]/15 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-[#EF9F27] flex items-center justify-center">
+            <span className="text-[#854F0B] font-bold text-xs">CJ</span>
+          </div>
+          <span className="text-[#EF9F27] font-bold text-lg">CañaJusta</span>
         </div>
-        {/* Toggle lista/mapa */}
-        <div className="flex items-center bg-[#D3D1C7]/10 rounded-lg p-1 gap-1">
-          <button
-            onClick={() => setVista('lista')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${vista === 'lista' ? 'bg-[#EF9F27] text-[#854F0B]' : 'text-[#5F5E5A]'}`}
-          >
-            <List size={13} /> Lista
-          </button>
-          <button
-            onClick={() => setVista('mapa')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${vista === 'mapa' ? 'bg-[#EF9F27] text-[#854F0B]' : 'text-[#5F5E5A]'}`}
-          >
-            <Map size={13} /> Mapa
-          </button>
+        <div className="flex items-center gap-2">
+          <Link href="/añadir" className="flex items-center gap-1.5 bg-[#EF9F27] text-[#854F0B] font-bold text-sm px-3 py-1.5 rounded-lg">
+            <Plus size={14} />
+            Añadir precio
+          </Link>
+          <Link href="/perfil" className="w-8 h-8 flex items-center justify-center text-[#5F5E5A]">
+            <User size={20} />
+          </Link>
         </div>
       </header>
 
-      {/* Contenido principal */}
-      <div className="flex-1 min-h-0 relative">
+      {/* ── HERO ── */}
+      <section className="px-4 py-8 text-center border-b border-[#D3D1C7]/10">
+        <p className="text-[#5F5E5A] text-sm mb-1">Precio medio de la caña en Alcorcón</p>
+        <p className="text-[#EF9F27] font-bold text-6xl mb-2">
+          {PRECIO_MEDIO ? formatPrecio(PRECIO_MEDIO) : '—'}
+        </p>
+        <p className="text-[#5F5E5A] text-xs">basado en {PRECIOS_TOTAL} precios reportados</p>
 
-        {/* ── VISTA LISTA ── */}
-        {vista === 'lista' && (
-          <div className="absolute inset-0 overflow-y-auto">
-            {/* Botón ubicación */}
-            <div className="px-4 pt-3 pb-2">
-              <button
-                onClick={handleMasBaratos}
-                className="w-full flex items-center justify-center gap-2 bg-[#EF9F27]/10 border border-[#EF9F27]/30 text-[#EF9F27] text-sm font-medium px-4 py-2.5 rounded-xl active:scale-95 transition-transform"
-              >
-                <Navigation size={14} />
-                {Object.keys(distancias).length > 0 ? 'Ver los 3 más baratos cerca' : 'Más baratos cerca de mí'}
-              </button>
-              {geoError && <p className="text-[#C73E3A] text-xs mt-1 text-center">{geoError}</p>}
+        {/* Stats */}
+        <div className="flex items-center justify-center gap-0 mt-6 text-xs divide-x divide-[#D3D1C7]/20">
+          {[
+            { label: 'bares', value: BARES.length },
+            { label: 'municipio', value: 1 },
+            { label: 'verificados', value: BARES.filter(b => b.verificado).length },
+            { label: 'más barato', value: PRECIO_MIN ? formatPrecio(PRECIO_MIN) : '—', color: '#639922' },
+            { label: 'más caro', value: PRECIO_MAX ? formatPrecio(PRECIO_MAX) : '—', color: '#C73E3A' },
+          ].map(s => (
+            <div key={s.label} className="px-3 py-1 text-center">
+              <p className="font-bold text-sm" style={{ color: s.color ?? '#EF9F27' }}>{s.value}</p>
+              <p className="text-[#5F5E5A]">{s.label}</p>
             </div>
+          ))}
+        </div>
+      </section>
 
-            {/* Bares con precio */}
-            <div className="px-4 pb-2">
-              <p className="text-[#5F5E5A] text-xs font-medium mb-2 uppercase tracking-wide">Ordenados por precio</p>
-              <div className="space-y-2">
-                {baresOrdenados.map(({ bar, precio }, i) => {
-                  const color = getColorPorPrecioDirecto(precio!, 'caña');
-                  const cl = colorClasses[color];
-                  const dist = distancias[bar.id];
-                  return (
-                    <Link
-                      key={bar.id}
-                      href={`/bar/${bar.id}`}
-                      className="flex items-center gap-3 bg-[#D3D1C7]/8 border border-[#D3D1C7]/10 rounded-xl px-4 py-3 active:bg-[#D3D1C7]/15"
-                    >
-                      <span className="text-[#5F5E5A] text-sm w-5 text-center font-medium">{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[#F5F0E8] font-medium truncate">{bar.nombre}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {bar.direccion && (
-                            <span className="text-[#5F5E5A] text-xs truncate">{bar.direccion}</span>
-                          )}
-                          {dist !== undefined && (
-                            <span className="text-[#5F5E5A] text-xs flex-none">
-                              · {dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex-none text-right">
-                        <span className={`${cl.text} font-bold text-base`}>{formatPrecio(precio!)}</span>
-                        <p className="text-[#5F5E5A] text-xs">caña</p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+      {/* ── BUSCADOR ── */}
+      <section className="px-4 py-4 border-b border-[#D3D1C7]/10">
+        <div className="relative mb-3">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5F5E5A]" />
+          <input
+            type="text"
+            placeholder="Buscar bar..."
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            className="w-full bg-[#D3D1C7]/10 border border-[#D3D1C7]/20 rounded-xl pl-9 pr-4 py-3 text-[#F5F0E8] placeholder-[#5F5E5A] focus:outline-none focus:border-[#EF9F27] text-sm"
+          />
+        </div>
+        <button
+          onClick={handleNearMe}
+          disabled={geoLoading}
+          className="w-full flex items-center justify-center gap-2 border border-[#EF9F27]/40 text-[#EF9F27] text-sm font-medium py-2.5 rounded-xl active:scale-95 transition-transform"
+        >
+          <MapPin size={14} />
+          {geoLoading ? 'Obteniendo ubicación...' : Object.keys(distancias).length > 0 ? 'Ordenado por cercanía ✓' : 'Ordenar por cercanía'}
+        </button>
+      </section>
+
+      {/* ── MAPA ── */}
+      <section className="border-b border-[#D3D1C7]/10">
+        <div ref={mapRef} style={{ height: 260 }} />
+        <div className="flex items-center justify-around px-4 py-2 text-xs text-[#5F5E5A]">
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#639922]" />Justo</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#EF9F27]" />Medio</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#C73E3A]" />Cañazo</div>
+        </div>
+      </section>
+
+      {/* ── RANKINGS ── */}
+      <section className="px-4 py-5 border-b border-[#D3D1C7]/10">
+        <div className="grid grid-cols-2 gap-3">
+          {/* Más baratos */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[#639922] font-bold text-xs uppercase tracking-wide">Más baratos</p>
+              <Link href="/ranking" className="text-[#5F5E5A] text-xs flex items-center gap-0.5">ver más <ChevronRight size={11} /></Link>
             </div>
-
-            {/* Bares sin precio */}
-            {baresSinPrecio.length > 0 && (
-              <div className="px-4 pb-6 mt-4">
-                <p className="text-[#5F5E5A] text-xs font-medium mb-2 uppercase tracking-wide">Sin precio aún — ¡añade el tuyo!</p>
-                <div className="space-y-2">
-                  {baresSinPrecio.map(({ bar }) => (
-                    <Link
-                      key={bar.id}
-                      href={`/añadir?bar=${bar.id}`}
-                      className="flex items-center gap-3 border border-dashed border-[#D3D1C7]/20 rounded-xl px-4 py-3"
-                    >
-                      <MapPin size={16} className="text-[#5F5E5A] flex-none" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[#5F5E5A] font-medium truncate">{bar.nombre}</p>
-                        {bar.direccion && <p className="text-[#5F5E5A]/60 text-xs truncate">{bar.direccion}</p>}
-                      </div>
-                      <span className="text-[#EF9F27] text-xs font-medium flex-none">+ precio</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── VISTA MAPA ── */}
-        {vista === 'mapa' && (
-          <div className="absolute inset-0">
-            <div ref={mapRef} className="absolute inset-0" />
-            <button
-              onClick={handleMasBaratos}
-              className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-[#1A1A1A] text-[#F5F0E8] text-sm font-medium px-4 py-2 rounded-full shadow-lg border border-[#D3D1C7]/20 active:scale-95 transition-transform whitespace-nowrap"
-            >
-              <Navigation size={14} className="text-[#EF9F27]" />
-              Más baratos cerca
-            </button>
-            <div className="absolute bottom-3 left-4 right-4 bg-[#F5F0E8] rounded-xl px-4 py-2 flex items-center justify-around text-sm z-[1000] shadow-lg">
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#639922]" /><span className="text-[#1A1A1A]">Justo</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#EF9F27]" /><span className="text-[#1A1A1A]">Medio</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-[#C73E3A]" /><span className="text-[#1A1A1A]">Cañazo</span></div>
+            <div className="space-y-1">
+              {MAS_BARATOS.map(({ bar, precio }, i) => (
+                <Link key={bar.id} href={`/bar/${bar.id}`} className="flex items-center gap-2 py-1.5">
+                  <span className="text-[#5F5E5A] text-xs w-4">{i + 1}</span>
+                  <span className="flex-1 text-[#F5F0E8] text-xs truncate">{bar.nombre}</span>
+                  <span className="text-[#639922] font-bold text-xs">{formatPrecio(precio)}</span>
+                </Link>
+              ))}
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Nav — flex-none, fuera del área del mapa */}
-      <BottomNav fixed={false} />
-
-      {/* Modal más baratos */}
-      {modal && (
-        <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/60" onClick={() => setModal(null)}>
-          <div className="bg-[#1A1A1A] rounded-t-2xl w-full max-w-lg p-6 pb-10" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-[#F5F0E8] font-bold text-lg">Los más baratos cerca</h2>
-              <button onClick={() => setModal(null)}><X size={22} className="text-[#5F5E5A]" /></button>
+          {/* Más caros */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[#C73E3A] font-bold text-xs uppercase tracking-wide">Más caros</p>
+              <Link href="/ranking" className="text-[#5F5E5A] text-xs flex items-center gap-0.5">ver más <ChevronRight size={11} /></Link>
             </div>
-            <div className="space-y-3">
-              {modal.map(({ bar, precio, distancia }, i) => (
-                <button
-                  key={bar.id}
-                  onClick={() => { setModal(null); router.push(`/bar/${bar.id}`); }}
-                  className="w-full flex items-center gap-4 bg-[#D3D1C7]/10 rounded-xl px-4 py-3 text-left"
-                >
-                  <span className="text-[#5F5E5A] font-bold w-5 text-center">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[#F5F0E8] font-medium truncate">{bar.nombre}</p>
-                    <p className="text-[#5F5E5A] text-xs">{distancia < 1 ? `${Math.round(distancia * 1000)}m` : `${distancia.toFixed(1)}km`}</p>
-                  </div>
-                  <span className="text-[#639922] font-bold text-lg">{formatPrecio(precio)}</span>
-                </button>
+            <div className="space-y-1">
+              {MAS_CAROS.map(({ bar, precio }, i) => (
+                <Link key={bar.id} href={`/bar/${bar.id}`} className="flex items-center gap-2 py-1.5">
+                  <span className="text-[#5F5E5A] text-xs w-4">{i + 1}</span>
+                  <span className="flex-1 text-[#F5F0E8] text-xs truncate">{bar.nombre}</span>
+                  <span className="text-[#C73E3A] font-bold text-xs">{formatPrecio(precio)}</span>
+                </Link>
               ))}
             </div>
           </div>
         </div>
-      )}
+      </section>
+
+      {/* ── LISTA COMPLETA ── */}
+      <section className="px-4 py-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[#D3D1C7] font-medium text-sm">
+            {busqueda ? `${baresFiltrados?.length ?? 0} resultados` : Object.keys(distancias).length > 0 ? 'Ordenados por cercanía' : 'Todos los bares'}
+          </p>
+        </div>
+        <div className="space-y-2">
+          {baresListados.map(({ bar, precio }) => {
+            const color = getColorPorPrecioDirecto(precio, 'caña');
+            const cl = colorClasses[color];
+            const dist = distancias[bar.id];
+            return (
+              <Link key={bar.id} href={`/bar/${bar.id}`} className="flex items-center gap-3 border border-[#D3D1C7]/10 rounded-xl px-4 py-3 active:bg-[#D3D1C7]/10">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[#F5F0E8] font-medium truncate">{bar.nombre}</p>
+                    {bar.verificado && <BadgeCheck size={13} className="text-[#639922] flex-none" />}
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {bar.direccion && <p className="text-[#5F5E5A] text-xs truncate">{bar.direccion}</p>}
+                    {dist !== undefined && <p className="text-[#5F5E5A] text-xs flex-none">· {dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`}</p>}
+                  </div>
+                </div>
+                <div className="flex-none text-right">
+                  <p className={`${cl.text} font-bold`}>{formatPrecio(precio)}</p>
+                  <p className="text-[#5F5E5A] text-xs">caña</p>
+                </div>
+              </Link>
+            );
+          })}
+
+          {/* Bares sin precio */}
+          {!busqueda && BARES.filter(b => getPrecioCanaPromedio(b.id) === null).map(bar => (
+            <Link key={bar.id} href={`/añadir?bar=${bar.id}`} className="flex items-center gap-3 border border-dashed border-[#D3D1C7]/15 rounded-xl px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[#5F5E5A] font-medium truncate">{bar.nombre}</p>
+                {bar.direccion && <p className="text-[#5F5E5A]/50 text-xs truncate">{bar.direccion}</p>}
+              </div>
+              <span className="text-[#EF9F27] text-xs font-medium flex-none">+ precio</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FOOTER CTA ── */}
+      <section className="px-4 py-8 border-t border-[#D3D1C7]/10 text-center">
+        <p className="text-[#F5F0E8] font-bold text-lg mb-1">¿Has tomado una caña hoy?</p>
+        <p className="text-[#5F5E5A] text-sm mb-4">10 segundos · Sin registro · Ayuda a todos</p>
+        <Link href="/añadir" className="inline-block bg-[#EF9F27] text-[#854F0B] font-bold text-base px-8 py-3 rounded-2xl">
+          Añadir mi precio
+        </Link>
+      </section>
+
     </div>
   );
 }
