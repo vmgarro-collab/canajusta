@@ -11,11 +11,11 @@ const items = [
   { href: '/perfil', icon: User, label: 'Yo' },
 ];
 
-export default function BottomNav() {
+export default function BottomNav({ fixed = true }: { fixed?: boolean }) {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#1A1A1A] border-t border-[#D3D1C7]/20 z-50">
+    <nav className={`${fixed ? 'fixed bottom-0 left-0 right-0 z-50' : 'flex-none'} bg-[#1A1A1A] border-t border-[#D3D1C7]/20`}>
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">
         {items.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || (href === '/mapa' && pathname.startsWith('/bar'));

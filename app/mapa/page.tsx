@@ -78,13 +78,16 @@ export default function MapaPage() {
         setModal(cercanos);
         setGeoError('');
       },
-      () => setGeoError('No se pudo obtener tu ubicación'),
+      () => setGeoError('No se pudo obtener tu ubicacion'),
     );
   }
 
   return (
+    // Opción C: flex column con altura de viewport — nav es hijo, nunca overlapping con el mapa
     <div className="flex flex-col bg-[#1A1A1A]" style={{ height: '100dvh' }}>
-      <header className="flex-none flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-[#D3D1C7]/20 z-10">
+
+      {/* Header — flex-none */}
+      <header className="flex-none flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border-b border-[#D3D1C7]/20">
         <h1 className="text-[#F5F0E8] font-bold text-lg">Alcorcón</h1>
         <button className="flex items-center gap-1.5 text-[#D3D1C7] text-sm border border-[#D3D1C7]/30 rounded-lg px-3 py-1.5">
           <SlidersHorizontal size={14} />
@@ -92,7 +95,7 @@ export default function MapaPage() {
         </button>
       </header>
 
-      {/* Banda de métricas */}
+      {/* Métricas — flex-none */}
       <div className="flex-none flex items-center justify-center gap-4 px-4 py-2 bg-[#1A1A1A] border-b border-[#D3D1C7]/10 text-xs text-[#5F5E5A]">
         <span><span className="text-[#EF9F27] font-bold">{TOTAL_BARES}</span> bares</span>
         <span className="text-[#D3D1C7]/20">·</span>
@@ -101,17 +104,17 @@ export default function MapaPage() {
         <span><span className="text-[#EF9F27] font-bold">{TOTAL_VERIFICADOS}</span> verificados</span>
       </div>
 
-      {/* Mapa — ocupa el espacio entre header+banda y BottomNav */}
+      {/* Mapa — flex-1 min-h-0 para que no desborde */}
       <div className="relative flex-1 min-h-0">
         <div ref={mapRef} className="absolute inset-0" />
 
-        {/* Botón "Más baratos cerca de mí" */}
+        {/* Botón flotante */}
         <button
           onClick={handleMasBaratos}
           className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-[#1A1A1A] text-[#F5F0E8] text-sm font-medium px-4 py-2 rounded-full shadow-lg border border-[#D3D1C7]/20 active:scale-95 transition-transform whitespace-nowrap"
         >
           <Navigation size={14} className="text-[#EF9F27]" />
-          Más baratos cerca de mí
+          Más baratos cerca
         </button>
 
         {geoError && (
@@ -128,9 +131,10 @@ export default function MapaPage() {
         </div>
       </div>
 
-      <BottomNav />
+      {/* BottomNav — flex-none, NO fixed, parte del flujo */}
+      <BottomNav fixed={false} />
 
-      {/* Modal "Más baratos cerca de mí" */}
+      {/* Modal "Más baratos cerca" */}
       {modal && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/60" onClick={() => setModal(null)}>
           <div className="bg-[#1A1A1A] rounded-t-2xl w-full max-w-lg p-6 pb-10" onClick={e => e.stopPropagation()}>
